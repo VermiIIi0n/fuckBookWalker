@@ -30,6 +30,8 @@ poetry run python bookphucker <url or uuid of books>
 You should see something like this.
 ![sample](./imgs/sample.png)
 
+By default, `bookphucker` will try to reuse previous `cookies`, using `--no-cache` to clear cookies.
+
 ## Common Issues
 
 ### Error 998 Stuck after showing title & authors

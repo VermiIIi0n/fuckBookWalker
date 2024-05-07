@@ -47,6 +47,7 @@ undetected-chromedriver = "^3.5.5"
 setuptools = "^69.1.1"
 platformdirs = "^4.2.0"
 rich = "^13.7.1"
+semantic-version = "^2.10.0"
 
 [tool.poetry.extras]
 

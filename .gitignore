@@ -2,6 +2,7 @@ noupload
 workflow.*
 **/logs
 *.json
+*.bak
 exports/
 **/test.*
 babies/
