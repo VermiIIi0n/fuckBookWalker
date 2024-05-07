@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "fuckBookWalker"
-version = "0.1.0"
+version = "0.1.2"
 description = "Download books from bookwalker.jp"
 authors = ["VermiIIi0n <dungeon.behind0t@icloud.com>"]
 readme = "README.md"
@@ -48,6 +48,7 @@ setuptools = "^69.1.1"
 platformdirs = "^4.2.0"
 rich = "^13.7.1"
 semantic-version = "^2.10.0"
+requests = "^2.31.0"
 
 [tool.poetry.extras]
 
@@ -64,6 +65,7 @@ semantic-version = "^2.10.0"
 mypy = "^1.8.0"
 # types-toml = "^0.10.8.7"
 autopep8 = "^2.0.4"
+types-requests = "^2.31.0.20240406"
 
 
 [tool.coverage.run]
@@ -154,3 +156,6 @@ undoc-members = true
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+bookbaker = "bookphucker.cli:run"

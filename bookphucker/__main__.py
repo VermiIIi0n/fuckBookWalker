@@ -2,6 +2,7 @@ import argparse
 import sys
 import ujson as json
 import logging
+import requests
 from shutil import move, rmtree
 from urllib.parse import urlparse
 from getpass import getpass
@@ -17,28 +18,50 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("book_pages", help="The page url or book uuid", nargs='+')
     parser.add_argument("-r", "--region", help="The region of the bookwalker site",
-                        default="jp", choices=["jp", "tw"])
+                        default="auto", choices=["jp", "tw", "auto"])
     parser.add_argument("--no-cache", help="Clear cache directory (cookies, etc.)",
+                        action="store_true")
+    parser.add_argument("--overwrite", help="Overwrite existing files",
                         action="store_true")
 
     args = parser.parse_args()
-    match args.region:
-        case "jp":
-            from bookphucker.jp import login, download_book, logout
-        case "tw":
-            raise NotImplementedError("TW region is not supported yet.")
-            # from bookphucker.tw import login, download_book, logout
     book_uuids = list[str]()
+    region = args.region
+
+    print(f"Book UUIDs:\n\n")
 
     for book_page in args.book_pages:
-        if book_page.startswith("http"):
+        if "bookwalker" in book_page:
+            if not book_page.startswith("http"):
+                book_page = "https://" + book_page
             book_url = urlparse(book_page)
-            book_uuid = book_url.path
+            if ".jp" in book_url.hostname:
+                if region == "auto":
+                    region = "jp"
+                book_uuid = book_url.path
+                print(f"{book_uuid}")
+            elif ".com.tw" in book_url.hostname:
+                if region == "auto":
+                    region = "tw"
+                book_id = ''
+                if book_url.path.startswith("/product/"):
+                    book_id = book_url.path.removeprefix("/product/").split("/")[0]
+                    r = requests.head(
+                        f"https://www.bookwalker.com.tw/browserViewer/{book_id}/trial")
+                    book_url = urlparse(r.headers["Location"])
+                query = book_url.query
+                book_uuid = dict([param.split("=")
+                                 for param in query.split("&")])["cid"]
+                print(f"{book_uuid}{f" ({book_id})" if book_id else ''}")
         else:
             book_uuid = book_page
         book_uuids.append(book_uuid.strip('/')[-36:])
 
-    print(f"Book UUIDs:\n{'\n'.join(book_uuids)}\n")
+    match region:
+        case "jp" | "auto":
+            from bookphucker.jp import login, download_book, logout
+        case "tw":
+            from bookphucker.tw import login, download_book, logout
 
     cfg = Config()
 
@@ -80,11 +103,10 @@ def main():
             print("Manual login required, but browser is headless.")
             user_input = input(
                 "Would you like to continue with non-headless browser? (Y/n) ").strip().lower() or "y"
-            if user_input != "y":
-                return 1
-            driver.quit()
-            cfg.headless = False
-            driver = cfg.get_webdriver()
+            if user_input == "y":
+                driver.quit()
+                cfg.headless = False
+                driver = cfg.get_webdriver()
         while True:
             try:
                 login(driver, username, password, error_on_captcha=cfg.headless)
@@ -101,7 +123,7 @@ def main():
 
             try:
                 for book_uuid in book_uuids:
-                    download_book(driver, cfg, book_uuid)
+                    download_book(driver, cfg, book_uuid, overwrite=args.overwrite)
             except Error998:
                 login_retry += 1
                 if login_retry > max_login_retries:

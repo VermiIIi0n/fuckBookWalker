@@ -30,18 +30,12 @@ poetry run python bookphucker <url or uuid of books>
 You should see something like this.
 ![sample](./imgs/sample.png)
 
-By default, `bookphucker` will try to reuse previous `cookies`, using `--no-cache` to clear cookies.
+By default, `bookphucker` will try to reuse previous `cookies`, using `--no-cache` to clear `cookies`.
 
 ## Common Issues
 
-### Error 998 Stuck after showing title & authors
-
-Bookwalker doesn't allow multiple reading sessions, sometimes improperly quitting the page can cause this issue.
-
-Login using a browser and then logout can resolve it.
-
 ### Cannot log in
 
-You may encounter CAPTCHA during login.
+You may encounter CAPTCHA during the login process.
 
-Modify `"headless"` to `false` in `config.json` and then manually finish CAPTCHA.
+`bookphucker` will ask you to use non-headless mode to pass the captcha if your config sets `headless` to `true`.

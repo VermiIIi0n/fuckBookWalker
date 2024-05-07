@@ -26,10 +26,10 @@ def validate_login(driver: webdriver.Chrome) -> bool:
     url = f"https://member.{domain}/app/03/my/profile"
     driver.get(url)
     with suppress(TimeoutException):
-        WebDriverWait(driver, 5).until(lambda x: "ES0001" in x.page_source)
+        WebDriverWait(driver, 1).until(lambda x: "ES0001" in x.page_source)
         return False
     try:
-        WebDriverWait(driver, 5).until(EC.url_to_be(url))
+        WebDriverWait(driver, 2).until(EC.url_to_be(url))
         return True
     except TimeoutException:
         return False
@@ -110,7 +110,7 @@ def go2page(driver: webdriver.Chrome, menu_name: str, page: int):
     driver.execute_script(f"{menu_name}.options.a6l.moveToPage({page-1});")
 
 
-def download_book(driver: webdriver.Chrome, cfg: Config, book_uuid: str):
+def download_book(driver: webdriver.Chrome, cfg: Config, book_uuid: str, overwrite):
     logging.info("Downloading book %s", book_uuid)
     driver.get(f"https://{domain}/de{book_uuid}/")
     WebDriverWait(driver, 10).until(
@@ -121,6 +121,8 @@ def download_book(driver: webdriver.Chrome, cfg: Config, book_uuid: str):
     title = soup.find(class_="p-main__title").text.strip()
     authors_ml = soup.find(class_="p-author").find_all("dd")
     authors = [a.text.strip() for a in authors_ml]
+    if not title:
+        raise ValueError("Title not found")
 
     logging.info("Titled %s by %s", title, ", ".join(authors))
 
@@ -144,8 +146,6 @@ def download_book(driver: webdriver.Chrome, cfg: Config, book_uuid: str):
 
     driver.switch_to.window(driver.window_handles[-1])
 
-    wait4loading(driver)
-
     with suppress(TimeoutException):
         WebDriverWait(driver, 10).until(EC.presence_of_element_located(
             (By.ID, "pageSliderCounter"))
@@ -155,22 +155,26 @@ def download_book(driver: webdriver.Chrome, cfg: Config, book_uuid: str):
         logging.error("Error 998: Must log out from another device")
         raise Error998()
 
+    WebDriverWait(driver, 30).until(
+        EC.presence_of_element_located((By.CSS_SELECTOR, ".currentScreen canvas")))
+
+    WebDriverWait(driver, 30).until(
+        EC.invisibility_of_element_located((By.CLASS_NAME, "progressbar")))
+
     _, total_pages = get_pages(driver)
     prev_imgs = deque[bytes](maxlen=2)  # used for checking update for 2 buffers
     max_retries = 30
     logging.info("Total pages: %s", total_pages)
 
-    WebDriverWait(driver, 30).until(
-        EC.presence_of_element_located((By.CSS_SELECTOR, ".currentScreen canvas")))
     menu_name = get_menu_name(driver)
-
-    WebDriverWait(driver, 30).until(
-        EC.invisibility_of_element_located((By.CLASS_NAME, "progressbar")))
-
     go2page(driver, menu_name, 1)
 
     for current_page in track(range(1, total_pages + 1), description="Downloading", total=total_pages):
         retry = 0
+        savename = save_dir / f"page_{current_page}.png"
+        if savename.exists() and not overwrite:
+            logging.debug("Page %s already exists, skipping", current_page)
+            continue
         go2page(driver, menu_name, current_page)
         while current_page != get_pages(driver)[0]:
             sleep(0.1)
@@ -192,5 +196,5 @@ def download_book(driver: webdriver.Chrome, cfg: Config, book_uuid: str):
             sleep(0.3)
         if retry == max_retries:
             logging.warning("Potentially repeated page %s", current_page)
-        img.save(save_dir / f"page_{current_page}.png")
+        img.save(savename)
         logging.debug("Saved page %s", current_page)

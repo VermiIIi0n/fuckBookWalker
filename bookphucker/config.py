@@ -18,7 +18,7 @@ class Config(BaseModel):
     username: str | None = None
     password: str | None = None
     manual_login: bool = False
-    viewer_size: tuple[int, int] = (960, 1360)
+    viewer_size: tuple[int, int] = (1400, 2140)
     user_agent: str | None = None
     logging_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
 
