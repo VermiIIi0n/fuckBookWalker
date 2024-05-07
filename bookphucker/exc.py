@@ -1,0 +1,6 @@
+class Error998(Exception):
+    ...
+
+
+class RequiresCapcha(Exception):
+    ...
