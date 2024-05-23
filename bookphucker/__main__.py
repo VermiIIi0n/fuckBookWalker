@@ -72,7 +72,8 @@ def main():
             username = input("Enter your username: ") or None
             password = getpass("Enter your password: ") or None
             cfg = Config(username=username, password=password)
-            config_path.write_text(json.dumps(cfg.model_dump(mode="json"), indent=2))
+            config_path.write_text(
+                json.dumps(cfg.model_dump(mode="json"), indent=2), encoding = "utf-8")
             print(f"Config file created at {config_path}")
     else:
         print(f"Config file found at {config_path}")
@@ -80,7 +81,8 @@ def main():
         cfg, updated = Config.from_dict(d)
         if updated:
             move(config_path, config_path.with_suffix(".bak"))
-            config_path.write_text(json.dumps(cfg.model_dump(mode="json"), indent=2))
+            config_path.write_text(
+                json.dumps(cfg.model_dump(mode="json"), indent=2), encoding = "utf-8")
             print(f"Config file updated at {config_path}")
 
     if args.no_cache and cache_path.exists():
@@ -102,8 +104,8 @@ def main():
         if manual_login and cfg.headless:
             print("Manual login required, but browser is headless.")
             user_input = input(
-                "Would you like to continue with non-headless browser? (Y/n) ").strip().lower() or "y"
-            if user_input == "y":
+                "Would you like to stay headless? (Y/n) ").strip().lower() or "y"
+            if user_input != "y":
                 driver.quit()
                 cfg.headless = False
                 driver = cfg.get_webdriver()
@@ -113,7 +115,7 @@ def main():
             except RequiresCapcha:
                 print("Captcha required, but browser is headless.")
                 user_input = input(
-                    "Would you like to continue with non-headless browser? (Y/n) ").strip().lower() or "y"
+                    "Would you like to continue with non-headless browser? (y/N) ").strip().lower() or "y"
                 if user_input != "y":
                     return 2
                 driver.quit()
@@ -133,7 +135,7 @@ def main():
                 continue
             break
     except Exception as e:
-        Path("error.html").write_text(driver.page_source)
+        Path("error.html").write_text(driver.page_source, encoding = "utf-8")
         Path("error.png").write_bytes(driver.get_screenshot_as_png())
         logging.error(
             "An error occurred. Please check error.html and error.png for more information.")

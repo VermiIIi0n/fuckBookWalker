@@ -32,7 +32,7 @@ def save_cookies(driver: webdriver.Chrome, url: str):
         all_cookies = json.loads(cookies_path.read_text())
     netloc = urlparse(url).netloc
     all_cookies[netloc] = cookies
-    cookies_path.write_text(json.dumps(all_cookies, indent=2))
+    cookies_path.write_text(json.dumps(all_cookies, indent=2), encoding = "utf-8")
 
 
 def scroll_click(driver: webdriver.Chrome, element: WebElement, timeout: int = 10):

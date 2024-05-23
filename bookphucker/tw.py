@@ -126,7 +126,7 @@ def download_book(driver: webdriver.Chrome, cfg: Config, book_uuid: str, overwri
     meta_path = save_dir / "meta.json"
     meta_path.write_text(json.dumps(
         {"title": title, "authors": authors},
-        ensure_ascii=False, indent=2))
+        ensure_ascii=False, indent=2), encoding = "utf-8")
 
     recover_cookies(driver, f"https://pcreader.{domain}")
 

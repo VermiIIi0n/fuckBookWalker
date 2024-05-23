@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "fuckBookWalker"
-version = "0.1.2"
+version = "0.1.3"
 description = "Download books from bookwalker.jp"
 authors = ["VermiIIi0n <dungeon.behind0t@icloud.com>"]
 readme = "README.md"

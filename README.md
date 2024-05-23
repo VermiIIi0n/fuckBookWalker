@@ -1,4 +1,4 @@
-# Unpolished bookwalker.jp scraper
+# Unpolished bookwalker scraper
 
 > It just works. -- Todd Howard
 
@@ -29,6 +29,10 @@ poetry run python bookphucker <url or uuid of books>
 
 You should see something like this.
 ![sample](./imgs/sample.png)
+
+### Configuration
+
+wip...
 
 By default, `bookphucker` will try to reuse previous `cookies`, using `--no-cache` to clear `cookies`.
 
