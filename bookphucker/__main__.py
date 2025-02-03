@@ -55,6 +55,7 @@ def main():
                 print(f"{book_uuid}{f" ({book_id})" if book_id else ''}")
         else:
             book_uuid = book_page
+            print(f"{book_uuid}")
         book_uuids.append(book_uuid.strip('/')[-36:])
 
     match region:
