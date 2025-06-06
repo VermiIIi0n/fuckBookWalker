@@ -6,9 +6,10 @@ from pydantic import BaseModel, ConfigDict
 from semantic_version import Version
 from webdriver_manager.chrome import ChromeDriverManager
 from webdriver_manager.core.os_manager import ChromeType
+from selenium.webdriver.chrome.service import Service
 
 
-CURRENT_VERSION = Version("0.1.1")
+CURRENT_VERSION = Version("0.2.0")
 
 class Config(BaseModel):
     model_config = ConfigDict(extra="allow", validate_assignment=True)
@@ -18,7 +19,7 @@ class Config(BaseModel):
     username: str | None = None
     password: str | None = None
     manual_login: bool = False
-    viewer_size: tuple[int, int] = (1400, 2140)
+    viewer_size: tuple[int, int] = (1440, 1440)
     user_agent: str | None = None
     logging_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
 
@@ -27,22 +28,25 @@ class Config(BaseModel):
         options = uc.ChromeOptions()
         options.set_capability("unhandledPromptBehavior", "accept")
         options.add_argument("--high-dpi-support=1")
-        options.add_argument("--device-scale-factor=1")
-        options.add_argument("--force-device-scale-factor=1")
         options.add_argument(f"--user-agent={ua}")
+        options.add_argument(f"--window-size={self.viewer_size[0]},{self.viewer_size[1]}")
         chrome_type = ChromeType.CHROMIUM if self.browser == "chromium" else ChromeType.GOOGLE
-        chrome_driver = uc.Chrome(
-            options=options,
-            headless=self.headless,
-            driver_executable_path=ChromeDriverManager(chrome_type=chrome_type).install())
-        return chrome_driver
+        # Install matching ChromeDriver and create a Service
+        service = Service(ChromeDriverManager(chrome_type=chrome_type).install())
+        # Handle headless mode via options
+        if self.headless:
+            # use new headless flag for modern Chrome
+            options.add_argument("--headless=new")
+        # Initialize undetected_chromedriver with correct service
+        driver = uc.Chrome(options=options, service=service)
+        return driver
 
     def config_logging(self):
         level = getattr(logging, self.logging_level)
         logging.basicConfig(level=level)
     
-    @staticmethod
-    def from_dict(data: dict) -> tuple[Config, bool]:
+    @classmethod
+    def from_dict(cls, data: dict) -> tuple[Config, bool]:
         """
         # Recover Config object from dictionary
         also return if it was updated
@@ -54,5 +58,7 @@ class Config(BaseModel):
             return Config(**data), data_version.patch < CURRENT_VERSION.patch
         if data_version.major > CURRENT_VERSION.major:
             raise ValueError("Unsupported config version")
+        if data_version < Version("0.2.0"):
+            data["viewer_size"] = cls.viewer_size
         return Config(**data), True
         

@@ -8,9 +8,9 @@ from urllib.parse import urlparse
 from getpass import getpass
 from pathlib import Path
 from contextlib import suppress
-from selenium.common.exceptions import WebDriverException
+from selenium.common.exceptions import WebDriverException, TimeoutException
 from bookphucker import Config
-from bookphucker.exc import RequiresCapcha, Error998
+from bookphucker.exc import RequiresCapcha
 from bookphucker.commonvars import config_path, cache_path
 
 
@@ -127,13 +127,17 @@ def main():
             try:
                 for book_uuid in book_uuids:
                     download_book(driver, cfg, book_uuid, overwrite=args.overwrite)
-            except Error998:
-                login_retry += 1
-                if login_retry > max_login_retries:
+            except TimeoutException:
+                if "ERROR998" in driver.page_source:
+                    logging.error("Error 998: Must log out from another device")
+                    login_retry += 1
+                    if login_retry > max_login_retries:
+                        raise
+                    logging.warning("Retrying login %s/%s", login_retry, max_login_retries)
+                    logout(driver)
+                    continue
+                else:
                     raise
-                logging.warning("Retrying login %s/%s", login_retry, max_login_retries)
-                logout(driver)
-                continue
             break
     except Exception as e:
         Path("error.html").write_text(driver.page_source, encoding = "utf-8")
