@@ -3,6 +3,7 @@ import bs4
 import io
 import logging
 import time
+from typing import cast
 from rich.progress import track
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -80,7 +81,7 @@ def login(driver: webdriver.Chrome, username: str, password: str, error_on_captc
         if driver.find_element(
             By.CSS_SELECTOR,
             "iframe[src^='https://www.recaptcha.net/recaptcha/api2/bframe']"
-            ).is_displayed():
+        ).is_displayed():
             timeout = 180
     while True:
         cookies = driver.get_cookies()
@@ -103,9 +104,12 @@ def wait4loading(driver: webdriver.Chrome, timeout: int = 30):
     # wait until all loading overlays have disappeared
     WebDriverWait(driver, timeout).until_not(
         lambda d: any(e.is_displayed()
-        for e in d.find_elements(By.CLASS_NAME, "loading"))
+                      for e in d.find_elements(By.CLASS_NAME, "loading"))
     )
-    print(e.attibute("visibility") for e in driver.find_elements(By.CLASS_NAME, "loading"))
+    # Debug: print the CSS visibility for each loading element
+    print([e.get_attribute("style")
+          for e in driver.find_elements(By.CLASS_NAME, "loading")])
+
 
 def get_menu(driver: webdriver.Chrome) -> str:
     obj_name = driver.execute_script(
@@ -113,44 +117,53 @@ def get_menu(driver: webdriver.Chrome) -> str:
         "if (NFBR.a6G.Initializer[k]['menu'] !== undefined){ return k; }}")
     return f"NFBR.a6G.Initializer.{obj_name}.menu"
 
+
 def get_total_pages(driver: webdriver.Chrome):
     return driver.execute_script(
         f"return {get_menu(driver)}.model.attributes.a2u.X2g.length")
 
+
 def get_total_spreads(driver: webdriver.Chrome):
     return driver.execute_script(
         f"return {get_menu(driver)}.model.attributes.a2u.X2g.length")
+
 
 def get_current_page(driver: webdriver.Chrome):
     pages = driver.execute_script(
         f"return {get_menu(driver)}.model.attributes.viewera6e.getPageIndex()")
     return pages+1
 
+
 def get_current_spread(driver: webdriver.Chrome):
     return 1 + driver.execute_script(
         f"return {get_menu(driver)}.model.attributes.viewera6e.getSpreadIndex()")
 
+
 def go2page(driver: webdriver.Chrome, page: int):
     driver.execute_script(f"{get_menu(driver)}.options.a6l.moveToPage({page-1});")
+
 
 def go2spread(driver: webdriver.Chrome, spread: int):
     page_index = driver.execute_script(
         f"return {get_menu(driver)}.model.attributes.a2u.X2g[{spread-1}].pageIndex")
     go2page(driver, page_index+1)
 
+
 def download_book(driver: webdriver.Chrome, cfg: Config, book_uuid: str, overwrite):
     logging.info("Downloading book %s", book_uuid)
-    driver.get(f"https://{domain}/de{book_uuid}/")
+    driver.get(
+        f"https://member.{domain}/app/03/webstore/cooperation?r=de{book_uuid}%2F")
     WebDriverWait(driver, 10).until(
         EC.presence_of_element_located((By.CLASS_NAME, "t-c-product-main-data__title")))
 
     soup = bs4.BeautifulSoup(driver.page_source, "lxml")
 
-    title = soup.find(class_="t-c-product-main-data__title").text.strip()
-    authors_ml = soup.find(class_="t-c-product-main-data__authors").find_all("dd")
-    authors = [a.text.strip() for a in authors_ml]
-    if not title:
+    title_blk = soup.find(class_="t-c-product-main-data__title")
+    if title_blk is None:
         raise ValueError("Title not found")
+    title = title_blk.text.strip()
+    authors_blk = soup.find(class_="t-c-product-main-data__authors")
+    authors = [a.text.strip() for a in cast(bs4.Tag, authors_blk).find_all("dd")]
 
     logging.info("Titled %s by %s", title, ", ".join(authors))
 
@@ -162,16 +175,17 @@ def download_book(driver: webdriver.Chrome, cfg: Config, book_uuid: str, overwri
         )
         find_click(driver, By.CLASS_NAME, "gdpr-accept")
 
-    driver.get(
-        f"https://member.{domain}/app/03/webstore/cooperation"
-        f"?r=BROWSER_VIEWER/{book_uuid}/https%3A%2F%2Fbookwalker.jp%2Fde{book_uuid}%2F")
+    WebDriverWait(driver, 10).until(
+        EC.presence_of_element_located((By.CLASS_NAME, "t-c-read-button")))
+
+    find_click(driver, By.CLASS_NAME, "t-c-read-button")
 
     save_dir = Path(f"babies/{title}")
     save_dir.mkdir(exist_ok=True, parents=True)
     meta_path = save_dir / "meta.json"
     meta_path.write_text(json.dumps(
         {"title": title, "authors": authors},
-        ensure_ascii=False, indent=2), encoding = "utf-8")
+        ensure_ascii=False, indent=2), encoding="utf-8")
 
     driver.switch_to.window(driver.window_handles[-1])
 
@@ -220,7 +234,8 @@ def download_book(driver: webdriver.Chrome, cfg: Config, book_uuid: str, overwri
                 prev_imgs.append(img_bytes)
                 break
             retry += 1
-            logging.debug("Retrying page %s (%s/%s)", current_spread, retry, max_retries)
+            logging.debug("Retrying page %s (%s/%s)",
+                          current_spread, retry, max_retries)
             sleep(0.3)
         if retry == max_retries:
             logging.warning("Potentially repeated page %s", current_spread)

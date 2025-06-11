@@ -3,6 +3,7 @@ import bs4
 import io
 import logging
 import time
+from typing import cast
 from rich.progress import track
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -109,15 +110,13 @@ def download_book(driver: webdriver.Chrome, cfg: Config, book_uuid: str, overwri
         f"https://www.bookwalker.com.tw/browserViewer/{book_uuid}/trial_end")
 
     soup = bs4.BeautifulSoup(driver.page_source, "lxml")
-    product_id = soup.find("meta", {"property": "og:url"})["content"].split("/")[-1]
+    product_id = soup.find("meta", {"property": "og:url"})["content"].split("/")[-1]  # type: ignore[index]
     logging.debug("Product ID for book %s is %s", book_uuid, product_id)
     authors = []
-    data: bs4.Tag
-    span: bs4.Tag
     for data in soup.find_all(class_="writer_data"):
-        for span in data.find_all("span"):
+        for span in cast(bs4.Tag, data).find_all("span"):
             authors.append(span.text.strip())
-    title = soup.head.title.text.strip()
+    title = soup.head.title.text.strip()  # type: ignore[union-attr]
     if not title:
         raise ValueError("Title not found")
 
