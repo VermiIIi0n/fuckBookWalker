@@ -120,13 +120,12 @@ def get_menu(driver: webdriver.Chrome) -> str:
 
 def get_total_pages(driver: webdriver.Chrome):
     return driver.execute_script(
-        f"return {get_menu(driver)}.model.attributes.a2u.X2g.length")
+        f"return {get_menu(driver)}.model.attributes.a2u.r8q.length")
 
 
 def get_total_spreads(driver: webdriver.Chrome):
     return driver.execute_script(
-        f"return {get_menu(driver)}.model.attributes.a2u.X2g.length")
-
+        f"return {get_menu(driver)}.model.attributes.a2u.r8q.length")
 
 def get_current_page(driver: webdriver.Chrome):
     pages = driver.execute_script(
@@ -145,7 +144,7 @@ def go2page(driver: webdriver.Chrome, page: int):
 
 def go2spread(driver: webdriver.Chrome, spread: int):
     page_index = driver.execute_script(
-        f"return {get_menu(driver)}.model.attributes.a2u.X2g[{spread-1}].pageIndex")
+        f"return {get_menu(driver)}.model.attributes.a2u.r8q[{spread-1}].pageIndex")
     go2page(driver, page_index+1)
 
 
