@@ -163,7 +163,7 @@ def download_book(driver: webdriver.Chrome, cfg: Config, book_uuid: str, overwri
         raise ValueError("Title not found")
     title = title_blk.text.strip()
     authors_blk = soup.find(class_="t-c-product-main-data__authors")
-    authors = [a.text.strip() for a in cast(bs4.Tag, authors_blk).find_all("dd")]
+    authors = [a.text.strip() for a in cast(bs4.Tag, authors_blk).find_all("dd")] if authors_blk else []
 
     logging.info("Titled %s by %s", title, ", ".join(authors))
 
