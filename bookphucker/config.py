@@ -30,6 +30,11 @@ class Config(BaseModel):
         options.add_argument("--high-dpi-support=1")
         options.add_argument(f"--user-agent={ua}")
         options.add_argument(f"--window-size={self.viewer_size[0]},{self.viewer_size[1]}")
+        # snap specific options to allow chromedriver to find browser
+        #options.binary_location = "/usr/bin/chromium-browser"
+        #options.add_argument("--no-sandbox")
+        #options.add_argument("--disable-dev-shm-usage")
+
         chrome_type = ChromeType.CHROMIUM if self.browser == "chromium" else ChromeType.GOOGLE
         # Install matching ChromeDriver and create a Service
         service = Service(ChromeDriverManager(chrome_type=chrome_type).install())

@@ -174,8 +174,14 @@ def download_book(driver: webdriver.Chrome, cfg: Config, book_uuid: str, overwri
         )
         find_click(driver, By.CLASS_NAME, "gdpr-accept")
 
+    # reject all cookies
+    WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.ID, "onetrust-reject-all-handler")))
+    find_click(driver,By.ID, "onetrust-reject-all-handler")
+
     WebDriverWait(driver, 10).until(
         EC.presence_of_element_located((By.CLASS_NAME, "t-c-read-button")))
+
+
 
     find_click(driver, By.CLASS_NAME, "t-c-read-button")
 
