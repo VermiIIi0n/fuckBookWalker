@@ -1,4 +1,7 @@
 from __future__ import annotations
+import re
+import shutil
+import subprocess
 import undetected_chromedriver as uc
 import logging
 from typing import Literal
@@ -10,6 +13,26 @@ from selenium.webdriver.chrome.service import Service
 
 
 CURRENT_VERSION = Version("0.2.0")
+
+
+def _detect_browser_version(browser: Literal["chrome", "chromium"]) -> tuple[int | None, str | None]:
+    """Return (major, full) version of the installed browser, or (None, None)."""
+    candidates = {
+        "chrome": ["google-chrome-stable", "google-chrome", "chrome"],
+        "chromium": ["chromium", "chromium-browser"],
+    }[browser]
+    for name in candidates:
+        path = shutil.which(name)
+        if not path:
+            continue
+        try:
+            out = subprocess.check_output([path, "--version"], text=True, timeout=5)
+        except (subprocess.SubprocessError, OSError):
+            continue
+        m = re.search(r"(\d+)\.(\d+\.\d+\.\d+)", out)
+        if m:
+            return int(m.group(1)), f"{m.group(1)}.{m.group(2)}"
+    return None, None
 
 class Config(BaseModel):
     model_config = ConfigDict(extra="allow", validate_assignment=True)
@@ -31,14 +54,26 @@ class Config(BaseModel):
         options.add_argument(f"--user-agent={ua}")
         options.add_argument(f"--window-size={self.viewer_size[0]},{self.viewer_size[1]}")
         chrome_type = ChromeType.CHROMIUM if self.browser == "chromium" else ChromeType.GOOGLE
-        # Install matching ChromeDriver and create a Service
-        service = Service(ChromeDriverManager(chrome_type=chrome_type).install())
+        # Pin ChromeDriver to the installed browser's major version so a newer
+        # default driver (e.g. 148) does not refuse to attach to an older Chrome (e.g. 147).
+        chrome_major, chrome_full = _detect_browser_version(self.browser)
+        if chrome_full is None:
+            logging.warning(
+                "Could not detect installed %s version; ChromeDriver may mismatch.",
+                self.browser,
+            )
+        service = Service(
+            ChromeDriverManager(
+                chrome_type=chrome_type,
+                driver_version=chrome_full,
+            ).install()
+        )
         # Handle headless mode via options
         if self.headless:
             # use new headless flag for modern Chrome
             options.add_argument("--headless=new")
         # Initialize undetected_chromedriver with correct service
-        driver = uc.Chrome(options=options, service=service)
+        driver = uc.Chrome(options=options, service=service, version_main=chrome_major)
         return driver
 
     def config_logging(self):
