@@ -25,12 +25,13 @@ def main():
                         action="store_true")
 
     args = parser.parse_args()
-    book_uuids = list[str]()
+    book_entries: list[tuple[str, str | None]] = []  # (uuid, host_override)
     region = args.region
 
     print(f"Book UUIDs:\n\n")
 
     for book_page in args.book_pages:
+        host_override: str | None = None
         if "bookwalker" in book_page:
             if not book_page.startswith("http"):
                 book_page = "https://" + book_page
@@ -38,6 +39,10 @@ def main():
             if ".jp" in book_url.hostname:
                 if region == "auto":
                     region = "jp"
+                # Preserve subdomain (e.g. r18.bookwalker.jp) so adult-store URLs
+                # are fetched on the right host instead of redirecting to the R-18 top.
+                if book_url.hostname != "bookwalker.jp":
+                    host_override = book_url.hostname
                 book_uuid = book_url.path
                 print(f"{book_uuid}")
             elif ".com.tw" in book_url.hostname:
@@ -56,7 +61,7 @@ def main():
         else:
             book_uuid = book_page
             print(f"{book_uuid}")
-        book_uuids.append(book_uuid.strip('/')[-36:])
+        book_entries.append((book_uuid.strip('/')[-36:], host_override))
 
     match region:
         case "jp" | "auto":
@@ -125,8 +130,9 @@ def main():
                 login(driver, username, password)
 
             try:
-                for book_uuid in book_uuids:
-                    download_book(driver, cfg, book_uuid, overwrite=args.overwrite)
+                for book_uuid, host_override in book_entries:
+                    download_book(driver, cfg, book_uuid, overwrite=args.overwrite,
+                                  host=host_override)
             except TimeoutException:
                 if "ERROR998" in driver.page_source:
                     logging.error("Error 998: Must log out from another device")

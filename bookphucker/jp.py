@@ -148,10 +148,26 @@ def go2spread(driver: webdriver.Chrome, spread: int):
     go2page(driver, page_index+1)
 
 
-def download_book(driver: webdriver.Chrome, cfg: Config, book_uuid: str, overwrite):
+def download_book(driver: webdriver.Chrome, cfg: Config, book_uuid: str, overwrite,
+                  host: str | None = None):
     logging.info("Downloading book %s", book_uuid)
-    driver.get(
-        f"https://member.{domain}/app/03/webstore/cooperation?r=de{book_uuid}%2F")
+    if host and host != domain:
+        # Adult store (r18.bookwalker.jp) etc. — cooperation only redirects to the
+        # store top, so visit the product page directly. Login cookies are scoped
+        # to .bookwalker.jp and propagate to the subdomain.
+        driver.get(f"https://{host}/de{book_uuid}/")
+    else:
+        driver.get(
+            f"https://member.{domain}/app/03/webstore/cooperation?r=de{book_uuid}%2F")
+    # R-18 sites interpose an age-confirmation form (id="confirm" → /certify/confirm/)
+    # that bounces unconfirmed visitors to the R-18 top. Submit it programmatically.
+    try:
+        WebDriverWait(driver, 2).until(
+            EC.presence_of_element_located((By.ID, "confirm")))
+        logging.info("R-18 age check detected; confirming")
+        driver.execute_script("document.getElementById('confirm').submit();")
+    except TimeoutException:
+        pass
     WebDriverWait(driver, 10).until(
         EC.presence_of_element_located((By.CLASS_NAME, "t-c-product-main-data__title")))
 
