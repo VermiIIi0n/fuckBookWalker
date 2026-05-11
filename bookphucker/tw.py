@@ -104,7 +104,8 @@ def go2page(driver: webdriver.Chrome, menu_name: str, page: int):
     driver.execute_script(f"{menu_name}.options.a6l.moveToPage({page-1});")
 
 
-def download_book(driver: webdriver.Chrome, cfg: Config, book_uuid: str, overwrite):
+def download_book(driver: webdriver.Chrome, cfg: Config, book_uuid: str, overwrite,
+                  host: str | None = None):
     logging.info("Downloading book %s", book_uuid)
     driver.get(
         f"https://www.bookwalker.com.tw/browserViewer/{book_uuid}/trial_end")
